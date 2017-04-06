@@ -10,7 +10,6 @@ setuptools.setup(
     install_requires=['numpy >= 1.7',
                       'toolz >= 0.7.2',
                       'cloudpickle >= 0.2.1',
-                      'dask >= 0.12',
                       'xarray >= 0.9.1'],
     tests_require=['pytest >= 2.7.1'],
     license="Apache",
