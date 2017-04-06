@@ -34,6 +34,6 @@ install:
   - pip install -e .
 
 script:
-  - py.test aospy --cov=indiff --cov-report term-missing
+  - py.test indiff --cov=indiff --cov-report term-missing
 after_success:
   - coveralls
