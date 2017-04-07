@@ -224,10 +224,10 @@ class LatUpwindConstPTestCase(EtaUpwindTestCase):
         super(LatUpwindConstPTestCase, self).setUp()
 
 
-class TestLatUpwindConstP(TestLonUpwindConstP, LatUpwindConstPTestCase):
+class TestLatUpwindConstP(TestEtaUpwind, LatUpwindConstPTestCase):
     def test_advec_unity_flow(self):
         actual = self._ADVEC_CLS(xr.ones_like(self.flow), self.arr, self.pk,
-                                 self.bk, self.ps, order=1, cyclic=False,
+                                 self.bk, self.ps, order=1,
                                  fill_edge=True).advec()
         desired = self._DERIV_BWD_CLS(self.arr, self.pk, self.bk, self.ps,
                                       order=1).d_dy_const_p()
