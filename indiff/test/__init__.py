@@ -2,6 +2,7 @@
 import unittest
 
 import numpy as np
+import pytest
 import xarray as xr
 
 
@@ -12,15 +13,17 @@ class InfiniteDiffTestCase(unittest.TestCase):
         self.dummy_len = 3
         self.dummy_dim = 'dummydim'
 
-        self.ones = xr.DataArray(np.ones((self.dummy_len, self.array_len)),
-                                 dims=[self.dummy_dim, self.dim])
-
-        self.zeros = xr.DataArray(np.zeros(self.ones.shape),
-                                  dims=self.ones.dims)
         self.arange = xr.DataArray(
-            np.arange(self.array_len*self.dummy_len).reshape(self.ones.shape),
-            dims=self.ones.dims
+            np.arange(self.array_len*self.dummy_len).reshape((self.dummy_len,
+                                                              self.array_len)),
+            dims=[self.dummy_dim, self.dim],
+            coords={self.dummy_dim: np.arange(self.dummy_len),
+                    self.dim: np.arange(self.array_len)}
         )
+
+        self.zeros = xr.zeros_like(self.arange)
+        self.ones = xr.ones_like(self.arange)
+
         randstate = np.random.RandomState(12345)
         self.random = xr.DataArray(randstate.rand(*self.ones.shape),
                                    dims=self.ones.dims,
@@ -104,7 +107,8 @@ class InfiniteDiffTestCase(unittest.TestCase):
         assert d1.shape == d2.shape, ('shape mismatch', d1.shape, d2.shape)
 
     def assertNotImplemented(self, func, *args, **kwargs):
-        self.assertRaises(NotImplementedError, func, *args, **kwargs)
+        with pytest.raises(NotImplementedError):
+            func(*args, **kwargs)
 
     def assertAllZeros(self, arr):
         assert not np.any(arr), arr
