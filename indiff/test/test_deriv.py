@@ -1,6 +1,7 @@
 import sys
 import unittest
 
+import pytest
 import xarray as xr
 
 from indiff import (FiniteDiff, OneSidedDiff, BwdDiff, FwdDiff, CenDiff,
@@ -11,28 +12,32 @@ from . import InfiniteDiffTestCase
 
 class DerivSharedTests(object):
     def test_arr_coord(self):
-        self.assertDatasetIdentical(self.deriv_obj._arr_coord(None),
+        xr.testing.assert_identical(self.deriv_obj._arr_coord(None),
                                     self.arr[self.dim])
-        self.assertDatasetIdentical(self.deriv_obj._arr_coord(self.random),
+        xr.testing.assert_identical(self.deriv_obj._arr_coord(self.random),
                                     self.random)
 
     def test_init(self):
-        self.assertDatasetIdentical(self.deriv_obj.arr, self.arr)
-        self.assertEqual(self.dim, self.deriv_obj.dim)
-        self.assertIsInstance(self.deriv_obj._arr_diff_obj, self._DIFF_CLS)
-        self.assertIsInstance(self.deriv_obj._coord_diff_obj, self._DIFF_CLS)
+        xr.testing.assert_identical(self.deriv_obj.arr, self.arr)
+        assert self.dim == self.deriv_obj.dim
+        assert isinstance(self.deriv_obj._arr_diff_obj, self._DIFF_CLS)
+        assert isinstance(self.deriv_obj._coord_diff_obj, self._DIFF_CLS)
 
     def test_slice_edge(self):
-        self.assertRaises(NotImplementedError, self.deriv_obj._slice_edge, 0)
+        with pytest.raises(NotImplementedError):
+            self.deriv_obj._slice_edge(0)
 
     def test_concat(self):
-        self.assertRaises(NotImplementedError, self.deriv_obj._concat)
+        with pytest.raises(NotImplementedError):
+            self.deriv_obj._concat()
 
     def test_private_deriv(self):
-        self.assertRaises(NotImplementedError, self.deriv_obj._deriv)
+        with pytest.raises(NotImplementedError):
+            self.deriv_obj._deriv()
 
     def test_public_deriv(self):
-        self.assertRaises(NotImplementedError, self.deriv_obj.deriv)
+        with pytest.raises(NotImplementedError):
+            self.deriv_obj.deriv()
 
 
 class FiniteDerivTestCase(InfiniteDiffTestCase):
@@ -60,7 +65,8 @@ class OneSidedDerivTestCase(FiniteDerivTestCase):
 
 class TestOneSidedDeriv(TestFiniteDeriv, OneSidedDerivTestCase):
     def test_edge_deriv_rev(self):
-        self.assertRaises(NotImplementedError, self.deriv_obj._edge_deriv_rev)
+        with pytest.raises(NotImplementedError):
+            self.deriv_obj._edge_deriv_rev()
 
 
 class FwdDerivTestCase(OneSidedDerivTestCase):
@@ -79,22 +85,22 @@ class TestFwdDeriv(TestOneSidedDeriv, FwdDerivTestCase):
                                     order=order, fill_edge=False)
         actual = deriv_obj._slice_edge(self.arr)
         desired = self.arr[{self.dim: slice(-(spacing*order), None)}]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_diff_arr(self):
         desired = self._DIFF_CLS(self.arr, self.dim).diff()
         actual = self.deriv_obj._arr_diff_obj.diff()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_diff_coord(self):
         desired = self._DIFF_CLS(self.arr[self.dim], self.dim).diff()
         actual = self.deriv_obj._coord_diff_obj.diff()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_concat(self):
         actual = self.deriv_obj._concat(self.ones, self.arr)
         desired = xr.concat([self.ones, self.arr], dim=self.dim)
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_edge_deriv_rev(self):
         self.deriv_obj._edge_deriv_rev()
@@ -105,69 +111,52 @@ class TestFwdDeriv(TestOneSidedDeriv, FwdDerivTestCase):
     def test_public_deriv(self):
         self.deriv_obj.deriv()
 
-    def test_deriv_output_coords_fill(self):
-        desired = self.random
-        for o in [1, 2]:
-            deriv_obj = self._DERIV_CLS(self.random, self.dim, order=o,
-                                        fill_edge=True)
-            actual = deriv_obj.deriv()
-            self.assertCoordsIdentical(actual, desired)
-
-    def test_deriv_output_coords_no_fill(self):
-        for o in [1, 2]:
-            trunc = slice(o, None) if self.is_bwd else slice(0, -o)
-            desired = self.random[{self.dim: trunc}]
-            deriv_obj = self._DERIV_CLS(self.random, self.dim, order=o,
-                                        fill_edge=False)
-            actual = deriv_obj.deriv()
-            self.assertCoordsIdentical(actual, desired)
-
     def test_deriv_constant_slope_order1_no_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim,
                                  fill_edge=False).deriv()
         desired = self.ones_trunc[0]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order1_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim, fill_edge=True).deriv()
         desired = self.ones
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order2_no_fill(self):
         actual = self._DERIV_CLS(self.arr, self.dim, order=2,
                                  fill_edge=False).deriv()
         desired = self.ones_trunc[1]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order2_fill(self):
         actual = self._DERIV_CLS(self.arr, self.dim, order=2,
                                  fill_edge=True).deriv()
         desired = self.ones
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order1_no_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=1,
                                  fill_edge=False).deriv()
         desired = self.zeros_trunc[0]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order1_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=1,
                                  fill_edge=True).deriv()
         desired = self.zeros
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order2_no_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=2,
                                  fill_edge=False).deriv()
         desired = self.zeros_trunc[1]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order2_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=2,
                                  fill_edge=True).deriv()
         desired = self.zeros
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_order1_spacing1_no_fill(self):
         label = 'upper' if self.is_bwd else 'lower'
@@ -175,7 +164,7 @@ class TestFwdDeriv(TestOneSidedDeriv, FwdDerivTestCase):
                    self.random[self.dim].diff(self.dim, label=label))
         actual = self._DERIV_CLS(self.random, self.dim,
                                  fill_edge=False).deriv()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_order1_spacing1_fill(self):
         label = 'lower'
@@ -191,7 +180,7 @@ class TestFwdDeriv(TestOneSidedDeriv, FwdDerivTestCase):
 
         desired = xr.concat([interior, edge], dim=self.dim)
         actual = self._DERIV_CLS(self.random, self.dim, fill_edge=True).deriv()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
 
 class BwdDerivTestCase(FwdDerivTestCase):
@@ -217,12 +206,12 @@ class TestBwdDeriv(TestFwdDeriv, BwdDerivTestCase):
         spacing, order = 1, 1
         actual = self.deriv_obj._slice_edge(self.arr)
         desired = self.arr[{self.dim: slice(None, (spacing*order))}]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_concat(self):
         actual = self.deriv_obj._concat(self.ones, self.arr)
         desired = xr.concat([self.arr, self.ones], dim=self.dim)
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_order1_spacing1_fill(self):
         trunc = slice(0, 2)
@@ -236,7 +225,7 @@ class TestBwdDeriv(TestFwdDeriv, BwdDerivTestCase):
 
         desired = xr.concat([edge, interior], dim=self.dim)
         actual = self._DERIV_CLS(self.random, self.dim, fill_edge=True).deriv()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
 
 class CenDerivTestCase(FiniteDerivTestCase):
@@ -258,98 +247,83 @@ class CenDerivTestCase(FiniteDerivTestCase):
 
 class TestCenDeriv(TestFiniteDeriv, CenDerivTestCase):
     def test_init(self):
-        self.assertDatasetIdentical(self.deriv_obj.arr, self.arr)
-        self.assertEqual(self.dim, self.deriv_obj.dim)
-        self.assertIsInstance(self.deriv_obj._deriv_fwd_obj, FwdDeriv)
-        self.assertIsInstance(self.deriv_obj._deriv_bwd_obj, BwdDeriv)
+        xr.testing.assert_identical(self.deriv_obj.arr, self.arr)
+        assert self.dim == self.deriv_obj.dim
+        assert isinstance(self.deriv_obj._deriv_fwd_obj, FwdDeriv)
+        assert isinstance(self.deriv_obj._deriv_bwd_obj, BwdDeriv)
 
     def test_concat(self):
         actual = self.deriv_obj._concat(self.random, self.ones, self.arr)
         desired = xr.concat([self.random, self.ones, self.arr], dim=self.dim)
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_diff_arr(self):
         desired = self._DIFF_CLS(self.arr, self.dim).diff()
         actual = self.deriv_obj._arr_diff_obj.diff()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_diff_coord(self):
         desired = self._DIFF_CLS(self.arr[self.dim], self.dim).diff()
         actual = self.deriv_obj._coord_diff_obj.diff()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_private_deriv(self):
         desired = (self._DIFF_CLS(self.zeros, self.dim).diff() /
                    self._DIFF_CLS(self.zeros[self.dim], self.dim).diff())
         actual = self._DERIV_CLS(self.zeros, self.dim,
                                  fill_edge=False)._deriv()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_public_deriv(self):
         self.deriv_obj.deriv()
-
-    def test_output_coords_no_fill(self):
-        for o in [1, 2]:
-            trunc = slice(o, -o)
-            desired = self.random[{self.dim: trunc}]
-            actual = self._DERIV_CLS(self.random, self.dim, fill_edge=False,
-                                     order=2*o).deriv()
-            self.assertCoordsIdentical(actual, desired)
-
-    def test_output_coords_fill(self):
-        desired = self.random
-        for o in [2, 4]:
-            actual = self._DERIV_CLS(self.random, self.dim, fill_edge=True,
-                                     order=o).deriv()
-            self.assertCoordsIdentical(actual, desired)
 
     def test_deriv_constant_slope_order2_no_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim, order=2,
                                  fill_edge=False).deriv()
         desired = self.ones_trunc[0]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order2_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim, order=2,
                                  fill_edge=True).deriv()
         desired = self.ones
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order4_no_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim, order=4,
                                  fill_edge=False).deriv()
         desired = self.ones_trunc[1]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_constant_slope_order4_fill(self):
         actual = self._DERIV_CLS(self.arange, self.dim, order=4,
                                  fill_edge=True).deriv()
         desired = self.ones
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order2_no_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=2,
                                  fill_edge=False).deriv()
         desired = self.zeros_trunc[0]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order2_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=2,
                                  fill_edge=True).deriv()
         desired = self.zeros
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order4_no_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=4,
                                  fill_edge=False).deriv()
         desired = self.zeros_trunc[1]
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_zero_slope_order4_fill(self):
         actual = self._DERIV_CLS(self.ones, self.dim, order=4,
                                  fill_edge=True).deriv()
         desired = self.zeros
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_deriv_order2_spacing1_fill(self):
         interior = (self._DIFF_CLS(self.random, self.dim).diff() /
@@ -365,7 +339,8 @@ class TestCenDeriv(TestFiniteDeriv, CenDerivTestCase):
 
         desired = xr.concat([left, interior, right], dim=self.dim)
         actual = self._DERIV_CLS(self.random, self.dim, fill_edge=True).deriv()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
+
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
