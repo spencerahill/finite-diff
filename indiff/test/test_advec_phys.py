@@ -17,10 +17,8 @@ from . import InfiniteDiffTestCase
 
 class PhysAdvecSharedTests(object):
     def test_init(self):
-        self.assertIsInstance(self.advec_obj._deriv_bwd_obj,
-                              self._DERIV_BWD_CLS)
-        self.assertIsInstance(self.advec_obj._deriv_fwd_obj,
-                              self._DERIV_FWD_CLS)
+        assert isinstance(self.advec_obj._deriv_bwd_obj, self._DERIV_BWD_CLS)
+        assert isinstance(self.advec_obj._deriv_fwd_obj, self._DERIV_FWD_CLS)
 
     def test_advec(self):
         self.assertNotImplemented(self.advec_obj.advec)
@@ -168,10 +166,10 @@ class LonUpwindConstPTestCase(EtaUpwindTestCase):
 
 class TestLonUpwindConstP(PhysAdvecSharedTests, LonUpwindConstPTestCase):
     def test_init(self):
-        self.assertEqual(self.advec_obj._DERIV_METHOD, self._DERIV_METHOD)
-        self.assertEqual(self.advec_obj._DERIV_BWD_CLS, self._DERIV_BWD_CLS)
-        self.assertEqual(self.advec_obj._DERIV_FWD_CLS, self._DERIV_FWD_CLS)
-        self.assertEqual(self.advec_obj._DIM, self._DIM)
+        assert self.advec_obj._DERIV_METHOD == self._DERIV_METHOD
+        assert self.advec_obj._DERIV_BWD_CLS == self._DERIV_BWD_CLS
+        assert self.advec_obj._DERIV_FWD_CLS == self._DERIV_FWD_CLS
+        assert self.advec_obj._DIM == self._DIM
 
     def test_advec(self):
         self.advec_obj.advec()
@@ -197,26 +195,22 @@ class TestLonUpwindConstP(PhysAdvecSharedTests, LonUpwindConstPTestCase):
                                             self.ps).advec())
 
     def test_advec_unity_flow(self):
-        ones = self.flow.copy()
-        ones.values = np.ones(ones.shape)
-        actual = self._ADVEC_CLS(ones, self.arr, self.pk, self.bk,
-                                 self.ps, order=1, cyclic=True,
+        actual = self._ADVEC_CLS(xr.ones_like(self.flow), self.arr, self.pk,
+                                 self.bk, self.ps, order=1, cyclic=True,
                                  fill_edge=False).advec()
         desired = self._DERIV_BWD_CLS(self.arr, self.pk, self.bk, self.ps,
                                       order=1, cyclic_lon=True,
                                       fill_edge_lon=False).d_dx_const_p()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
     def test_advec_unity_flow_not_cyclic(self):
-        ones = self.flow.copy()
-        ones.values = np.ones(ones.shape)
-        actual = self._ADVEC_CLS(ones, self.arr, self.pk, self.bk,
-                                 self.ps, order=1, cyclic=False,
+        actual = self._ADVEC_CLS(xr.ones_like(self.flow), self.arr, self.pk,
+                                 self.bk, self.ps, order=1, cyclic=False,
                                  fill_edge=True).advec()
         desired = self._DERIV_BWD_CLS(self.arr, self.pk, self.bk, self.ps,
                                       order=1, cyclic_lon=False,
                                       fill_edge_lon=True).d_dx_const_p()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
 
 class LatUpwindConstPTestCase(EtaUpwindTestCase):
@@ -232,13 +226,12 @@ class LatUpwindConstPTestCase(EtaUpwindTestCase):
 
 class TestLatUpwindConstP(TestLonUpwindConstP, LatUpwindConstPTestCase):
     def test_advec_unity_flow(self):
-        ones = self.flow.copy()
-        ones.values = np.ones(ones.shape)
-        actual = self._ADVEC_CLS(ones, self.arr, self.pk, self.bk,
-                                 self.ps, order=1, fill_edge=True).advec()
+        actual = self._ADVEC_CLS(xr.ones_like(self.flow), self.arr, self.pk,
+                                 self.bk, self.ps, order=1, cyclic=False,
+                                 fill_edge=True).advec()
         desired = self._DERIV_BWD_CLS(self.arr, self.pk, self.bk, self.ps,
                                       order=1).d_dy_const_p()
-        self.assertDatasetIdentical(actual, desired)
+        xr.testing.assert_identical(actual, desired)
 
 
 class SphereEtaUpwindTestCase(InfiniteDiffTestCase):
@@ -288,6 +281,7 @@ class TestSphereEtaUpwind(SphereEtaUpwindTestCase):
         zeros.values = np.zeros(zeros.shape)
         self.assertAllZeros(self._ADVEC_CLS(self.arr, self.pk, self.bk,
                                             self.ps).advec_x_const_p(zeros))
+
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
